@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/jetstack/cert-manager/test/acme/dns"
-	"github.com/lmq1999/bizflycloud-dns-webhook/bizflycloud"
+	"github.com/bizflycloud/bizflycloud-certmanager-dns-webhook/bizflycloud"
 )
 
 var (

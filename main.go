@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/jetstack/cert-manager/pkg/acme/webhook/cmd"
-	"github.com/lmq1999/bizflycloud-dns-webhook/bizflycloud"
+	"github.com/bizflycloud/bizflycloud-certmanager-dns-webhook/bizflycloud"
 	"k8s.io/klog"
 )
 
