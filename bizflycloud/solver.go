@@ -51,7 +51,6 @@ func (s *bizflycloudDNSProviderSolver) Initialize(kubeClientConfig *rest.Config,
 	return nil
 }
 
-//Present create a TXT record for your fqdn and challenge key for DNS01 Challenge
 func (s *bizflycloudDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 	klog.Infof("Presenting txt record: %v %v", ch.ResolvedFQDN, ch.ResolvedZone)
 	client, err := s.newClientFromChallenge(ch)
@@ -94,7 +93,6 @@ func (s *bizflycloudDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) er
 	return nil
 }
 
-//Cleanup delete out-date TXT record use for DNS01 challenge and remove after challenge complete
 func (s *bizflycloudDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	klog.Infof("Cleaning up txt record: %v %v", ch.ResolvedFQDN, ch.ResolvedZone)
 	client, err := s.newClientFromChallenge(ch)

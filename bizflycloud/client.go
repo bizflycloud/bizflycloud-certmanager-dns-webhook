@@ -32,7 +32,6 @@ type Client struct {
 	dnsc *gobizfly.Client
 }
 
-//newClient create a new bizflycloud client
 func newClient() (*Client, error) {
 	authMethod := os.Getenv(bizflyCloudAuthMethod)
 	username := os.Getenv(bizflyCloudEmailEnvName)
@@ -94,7 +93,6 @@ func newClient() (*Client, error) {
 	return &Client{dnsc: bizflyClient}, nil
 }
 
-//BizflyCloud using zoneID to GET/DELETE zone, so this use for transfer from domain name to BizflyCloud DNS zoneID
 func (c *Client) domainNameToZoneID(fqdn string) (string, error) {
 
 	var zoneID string
@@ -119,7 +117,6 @@ func (c *Client) domainNameToZoneID(fqdn string) (string, error) {
 	return zoneID, err
 }
 
-//find TXT record use for DNS01 Challenge
 func (c *Client) findTxtRecord(zonename string, fqdn string) ([]gobizfly.RecordSet, string, error) {
 
 	var ID string
