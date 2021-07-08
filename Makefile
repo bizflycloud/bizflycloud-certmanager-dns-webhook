@@ -10,10 +10,10 @@ KUBEBUILDER_VERSION=2.3.2
 
 $(shell mkdir -p "$(OUT)")
 
-test: _test/kubebuilder
+test: 
 	go test -v .
 
-_test/kubebuilder:
+kubebuilder:
 	curl -fsSL https://github.com/kubernetes-sigs/kubebuilder/releases/download/v$(KUBEBUILDER_VERSION)/kubebuilder_$(KUBEBUILDER_VERSION)_$(OS)_$(ARCH).tar.gz -o kubebuilder-tools.tar.gz
 	mkdir -p _test/kubebuilder
 	tar -xvf kubebuilder-tools.tar.gz

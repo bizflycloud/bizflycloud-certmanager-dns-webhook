@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/bizflycloud/gobizfly"
 	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/util"
@@ -33,6 +32,7 @@ type Client struct {
 	dnsc *gobizfly.Client
 }
 
+//newClient create a new bizflycloud client
 func newClient() (*Client, error) {
 	authMethod := os.Getenv(bizflyCloudAuthMethod)
 	username := os.Getenv(bizflyCloudEmailEnvName)
@@ -85,7 +85,6 @@ func newClient() (*Client, error) {
 			Password:      password,
 			AppCredID:     appCredId,
 			AppCredSecret: appCredSecret})
-	fmt.Println(token)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create token: %w", err)
 	}
@@ -95,6 +94,7 @@ func newClient() (*Client, error) {
 	return &Client{dnsc: bizflyClient}, nil
 }
 
+//BizflyCloud using zoneID to GET/DELETE zone, so this use for transfer from domain name to BizflyCloud DNS zoneID
 func (c *Client) domainNameToZoneID(fqdn string) (string, error) {
 
 	var zoneID string
@@ -107,6 +107,9 @@ func (c *Client) domainNameToZoneID(fqdn string) (string, error) {
 		return "", err
 	}
 
+	if last := len(zoneName) - 1; last >= 0 && zoneName[last] == '.' {
+		zoneName = zoneName[:last]
+	}
 	for _, i := range allZone.Zones {
 		if i.Name == zoneName {
 			zoneID = i.ID
@@ -116,35 +119,42 @@ func (c *Client) domainNameToZoneID(fqdn string) (string, error) {
 	return zoneID, err
 }
 
-func (c *Client) findTxtRecord(fqdn string) ([]gobizfly.RecordSet, error) {
+//find TXT record use for DNS01 Challenge
+func (c *Client) findTxtRecord(zonename string, fqdn string) ([]gobizfly.RecordSet, string, error) {
 
-	zoneName := fqdn
-	zoneID, err := c.domainNameToZoneID(fqdn)
-	if err != nil {
-		return nil, err
+	var ID string
+
+	zoneName := zonename
+	if last := len(zoneName) - 1; last >= 0 && zoneName[last] == '.' {
+		zoneName = zoneName[:last]
 	}
 
-	getZone, _ := c.dnsc.DNS.GetZone(
+	zoneID, err := c.domainNameToZoneID(zoneName)
+	if err != nil {
+		return nil, "", err
+	}
+
+	getZone, err := c.dnsc.DNS.GetZone(
 		context.Background(),
 		zoneID,
 	)
+	if err != nil {
+		return nil, "", err
+	}
 
 	allRecords := getZone.RecordsSet
 
-	var records []gobizfly.RecordSet
-
-	// The record Name doesn't contain the zoneName, so
-	// lets remove it before filtering the array of record
 	targetName := fqdn
-	if strings.HasSuffix(fqdn, zoneName) {
-		targetName = fqdn[:len(fqdn)-len(zoneName)]
+	if last := len(targetName) - 1; last >= 0 && targetName[last] == '.' {
+		targetName = targetName[:last]
 	}
+	targetName = targetName[0 : len(targetName)-len(zoneName)]
 
 	for _, record := range allRecords {
 		if util.ToFqdn(record.Name) == targetName {
-			records = append(records, record)
+			ID = record.ID
 		}
 	}
 
-	return records, err
+	return allRecords, ID, err
 }

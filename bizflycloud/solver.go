@@ -46,9 +46,12 @@ func (s *bizflycloudDNSProviderSolver) Initialize(kubeClientConfig *rest.Config,
 
 	s.client = cl
 
+	klog.Infof("Initialize Successed")
+
 	return nil
 }
 
+//Present create a TXT record for your fqdn and challenge key for DNS01 Challenge
 func (s *bizflycloudDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 	klog.Infof("Presenting txt record: %v %v", ch.ResolvedFQDN, ch.ResolvedZone)
 	client, err := s.newClientFromChallenge(ch)
@@ -62,25 +65,19 @@ func (s *bizflycloudDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) er
 		return err
 	}
 
-	records, err := client.findTxtRecord(ch.ResolvedZone)
-	if err != nil {
-		return err
+	values := []string{ch.Key}
+
+	recordName := ch.ResolvedFQDN[0 : len(ch.ResolvedFQDN)-len(ch.ResolvedZone)]
+	if last := len(recordName) - 1; last >= 0 && recordName[last] == '.' {
+		recordName = recordName[:last]
 	}
 
-	for _, record := range records {
-		for _, v := range record.Data {
-			if record.Type == "TXT" && v == ch.ResolvedZone {
-				return nil
-			}
-		}
-	}
-
-	values := []string{"value"}
-
-	createRequest := &gobizfly.CreateRecordPayload{
-		Name: ch.ResolvedZone,
-		Type: "TXT",
-		TTL:  60,
+	createRequest := &gobizfly.CreateNormalRecordPayload{
+		BaseCreateRecordPayload: gobizfly.BaseCreateRecordPayload{
+			Name: recordName,
+			Type: "TXT",
+			TTL:  3600,
+		},
 		Data: values,
 	}
 
@@ -89,14 +86,15 @@ func (s *bizflycloudDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) er
 		zoneID,
 		createRequest,
 	)
-
 	if err != nil {
 		return err
 	}
-	// TODO: add code that sets a record in the DNS provider's console
+
+	klog.Infof("Presented txt record %v", ch.ResolvedFQDN)
 	return nil
 }
 
+//Cleanup delete out-date TXT record use for DNS01 challenge and remove after challenge complete
 func (s *bizflycloudDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	klog.Infof("Cleaning up txt record: %v %v", ch.ResolvedFQDN, ch.ResolvedZone)
 	client, err := s.newClientFromChallenge(ch)
@@ -105,16 +103,23 @@ func (s *bizflycloudDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) er
 		return err
 	}
 
-	records, err := client.findTxtRecord(ch.ResolvedZone)
+	records, ID, err := client.findTxtRecord(ch.ResolvedZone, ch.ResolvedFQDN)
 	if err != nil {
 		return err
 	}
 
-	for _, record := range records {
-		err = client.dnsc.DNS.DeleteRecord(context.Background(), record.ID)
+	if ID == "" {
+		klog.Infof("No TXT record exist %v %v", ch.ResolvedFQDN, ch.ResolvedZone)
+		return nil
+	}
+
+	for range records {
+		err = client.dnsc.DNS.DeleteRecord(context.Background(), ID)
 		if err != nil {
 			return err
 		}
 	}
+
+	klog.Infof("Cleaned up txt record: %v %v", ch.ResolvedFQDN, ch.ResolvedZone)
 	return nil
 }
