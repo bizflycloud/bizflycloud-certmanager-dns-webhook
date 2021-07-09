@@ -34,6 +34,8 @@ spec:
               value: {{ .Values.auth | quote }}
             - name: BIZFLYCLOUD_EMAIL
               value: {{ .Values.bizflyEmail }}
+            - name: BIZFLYCLOUD_PASSWORD
+              value: {{ .Values.password }}
             - name: BIZFLYCLOUD_REGION
               value: {{ .Values.bizflyRegion }}
             - name: BIZFLYCLOUD_API_URL

@@ -8,7 +8,8 @@
 # here is recommended.
 groupName: acme.mycompany.com
 auth: 
-bizflyEmail: 
+bizflyEmail:
+password:
 bizflyRegion: 
 apiURL:
 tenantID: 
