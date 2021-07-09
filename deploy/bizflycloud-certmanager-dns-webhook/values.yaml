@@ -7,14 +7,21 @@
 # This group name should be **unique**, hence using your own company's domain
 # here is recommended.
 groupName: acme.mycompany.com
+auth: application_credential
+bizflyEmail: vultr@vccloud.vn
+bizflyRegion: HN
+apiURL: https://manage.bizflycloud.vn
+tenantID: 1e7f10a9850b45b488a3f0417ccb60e0
+appCredentialID: c40f8252494e4d0cafacc56e98d6cf60
+appCredentialSecret: LJH_8xTd2BRcC_SdJJVdx02HYnfmmmw_J9UBxb4be8eKFKcmiRJPqWNi8tawy8QMBF8D3gEtun30dtO0RRW_dA
 
 certManager:
   namespace: cert-manager
   serviceAccountName: cert-manager
 
 image:
-  repository: mycompany/webhook-image
-  tag: latest
+  repository: cr-hn-1.bizflycloud.vn/1e7f10a9850b45b488a3f0417ccb60e0/bizflycloud-certmanager-webhook
+  tag: "1.0"
   pullPolicy: IfNotPresent
 
 nameOverride: ""

@@ -118,7 +118,7 @@ This is important, as otherwise it'd be possible for anyone with access to your 
         app: bizflycloud-certmanager-dns-webhook
     rules:
     - apiGroups:
-        - acme.bizflycloud.vn
+        - acme.mycompany.example
         resources:
         - '*'
         verbs:
@@ -196,7 +196,7 @@ This is important, as otherwise it'd be possible for anyone with access to your 
                 - --tls-private-key-file=/tls/tls.key
             env:
                 - name: GROUP_NAME
-                value: "acme.example.vn"
+                value: "acme.mycompany.example"
                 - name: BIZFLYCLOUD_AUTH_METHOD
                 value: "application_credential"  #password
                 - name: BIZFLYCLOUD_EMAIL
@@ -241,13 +241,13 @@ This is important, as otherwise it'd be possible for anyone with access to your 
     apiVersion: apiregistration.k8s.io/v1
     kind: APIService
     metadata:
-    name: v1alpha1.acme.bizflycloud.vn
+    name: v1alpha1.acme.mycompany.example
     labels:
         app: bizflycloud-certmanager-dns-webhook
     annotations:
         cert-manager.io/inject-ca-from: "cert-manager/bizflycloud-webhook-webhook-tls"
     spec:
-    group: acme.bizflycloud.vn
+    group: acme.mycompany.example
     groupPriorityMinimum: 1000
     versionPriority: 15
     service:
@@ -434,7 +434,7 @@ After install cert-manager and bizflycloud-certmanager-dns-webhook
         solvers:
         - dns01:
             webhook:
-            groupName: acme.example.vn
+            groupName: acme.mycompany.example
             solverName: bizflycloud
     ```
 
