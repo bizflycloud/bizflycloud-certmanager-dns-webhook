@@ -23,6 +23,7 @@ jobs:
         uses: elgohr/Publish-Docker-Github-Action@master
         with:
           registry: cr-hn-1.vccloud.vn
-          name: cr-hn-1.vccloud.vn/31ff9581861a4d0ea4df5e7dda0f665d/bizflycloud-certmanager-dns-webhook:${{ steps.vars.outputs.tag }}
+          name: cr-hn-1.vccloud.vn/31ff9581861a4d0ea4df5e7dda0f665d/bizflycloud-certmanager-dns-webhook
           username: ${{ secrets.USER_CLOUD }}
           password: ${{ secrets.PASS }}
+          tags: "latest,${{ steps.vars.outputs.tag }}"
