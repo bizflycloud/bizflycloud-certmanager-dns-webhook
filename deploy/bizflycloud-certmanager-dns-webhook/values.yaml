@@ -21,8 +21,8 @@ certManager:
   serviceAccountName: cert-manager
 
 image:
-  repository: cr-hn-1.bizflycloud.vn/1e7f10a9850b45b488a3f0417ccb60e0/bizflycloud-certmanager-webhook
-  tag: "1.0"
+  repository: cr-hn-1.vccloud.vn/31ff9581861a4d0ea4df5e7dda0f665d/bizflycloud-certmanager-dns-webhook
+  tag: latest
   pullPolicy: IfNotPresent
 
 nameOverride: ""
