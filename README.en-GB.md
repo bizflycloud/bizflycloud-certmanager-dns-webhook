@@ -2,53 +2,49 @@
 
 Cert-manager ACME DNS webhook provider for BizflyCloud DNS.
 
-## Giới thiệu
+## Introduction
 
-BizflyCloud Cert-manager DNS là một webhook thực hiện công việc xử lý DNS01 challenge với cert-manager
+BizflyCloud Cert-manager DNS  is a webhook run in kubernetes to provide connect between cert-manager and Bizfly Cloud provider DNS.
 
-## Tại sao cần sử dụng BizflyCloud Cert-manager DNS webhook
+## Why need to use BizflyCloud Cert-manager DNS webhook
 
-Bizfly Cloud cung cấp dịch vụ DNS tại <https://manage.bizflycloud.vn/dns/>
+As you know Let's encrypt use 2 method to provide certificate which is ACME HTTP01 and DNS01.
 
-Cert-manager khi tạo TLS/SSL certificate thì cần kiểm tra rằng bạn có đang sở hữu quyền quản lý tên miền đó không. Sử dụng phương thức Challenge DNS01, đó là gửi 1 key cho bạn và kiểm tra các bản ghi tên miền `_acme-challenge.<tên miền của bạn>` có giá trị là key vừa gửi.
+THis web hook will automaticly create DNS01 challenge solver in BizflyCloud DNS and apply the certificate to your ingress.
 
-Thay vì phải thủ công lấy key, tạo bản ghi như vậy cho từng subdomain cho các ingress trong kubernetes. Webhook này sẽ đảm nhiệm việc tự động tạo các bản ghi đó, và tự động xóa đi khi cert-manager tạo TLS/SSL certificate thành công.
+## Install
 
-## Cài đặt
-
-### Cài đặt cert manager
+### Install cert manager
 
 Install cert manager using this document here: <https://cert-manager.io/docs/installation/kubernetes/>
 
-### Cài đặt webhook
+**Note**: If you customized the installation of cert-manager, you may need to also set the certManager.namespace and certManager.serviceAccountName values.
 
-#### Phương án 1
+### Install webhook
 
-Cài đặt bizflycloud-certmanager-dns-webhook sử dụng helm
+#### Option 1
 
-**Lưu ý**: Chọn groupname độc nhất, có thể lấy tên công ty của bạn (ví dụ `acme.mycompany.example`).
+Install bizflycloud-certmanager-dns-webhook using helm
 
-Chỉnh sửa các thông tin xác thực trong `./deploy/bizflycloud-certmanager-dns-webhook/values.yaml`
+**Note**: Choose a unique group name to identify your company or organization (for example `acme.mycompany.example`).
 
-**Lưu ý**: groupName và email là bắt buộc, có thể sử dụng **password** HOẶC **appCredential**
-
-Cài đặt sử dụng câu lệnh
+Change your authentication value in `./deploy/bizflycloud-certmanager-dns-webhook/values.yaml`
 
 ```bash
 helm install <deploy name> ./deploy/bizflycloud-certmanager-dns-webhook 
 ```
 
-#### Phương án 2
+#### Option 2
 
-Cài đặt bizflycloud-certmanager-dns-webhook với manifest.
+Install bizflycloud-certmanager-dns-webhook using manifest.
 
 **Notes**: Webhook's themselves are deployed as Kubernetes API services, in order to allow administrators to restrict access to webhooks with Kubernetes RBAC.
 
 This is important, as otherwise it'd be possible for anyone with access to your webhook to complete ACME challenge validations and obtain certificates.
 
-Cài đặt trong file `./manifest/bundle.yaml`
+Install using the file `./manifest/bundle.yaml`
 
-Chú ý thay đổi groupname `acme.mycompany.com` match ClusterIssuer trong các trường sau:
+Change your groupname match ClusterIssuer in these deployment:
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -115,11 +111,12 @@ spec:
   version: v1alpha1
 ```
 
-## Demo
+## Example
 
-Sau khi cài đặt cert-manager và webhook
+After install cert-manager and bizflycloud-certmanager-dns-webhook
 
-1. Tạo 2 service để demo:
+1. Create 2 service for demo:
+
     echo1.yaml
 
     ```yaml
@@ -194,17 +191,16 @@ Sau khi cài đặt cert-manager và webhook
             - containerPort: 5678
     ```
 
-2. Cài đặt nginx-ingress-controller
-
-    Hướng dẫn: <https://engineering.bizflycloud.vn/cai-dat-nginx-ingress-controller-cho-kubernetes/>
+2. Install nginx-ingress-controller
+    Follow this link: <https://engineering.bizflycloud.vn/cai-dat-nginx-ingress-controller-cho-kubernetes/>
 
     After that, use BizflyCloud DNS service to create record for your domain and sub-domain.
 
-    Sau đó, sử dụng dịch vụ DNS của BizflyCloud trỏ bản ghi và subdomain của bạn, địa chỉ IPv4 lấy từ loadbalancer được tạo ra với nginx-ingress
+    the Ipv4 value is your Loadbalancer IP created by nginx-ingress above
 
     ![dns](https://raw.githubusercontent.com/lmq1999/123/master/image.png)
 
-3. Tạo ClusterIssuer/Issuer
+3. Create ClusterIssuer/Issuer
 
     ```yaml
     apiVersion: cert-manager.io/v1alpha2
@@ -226,9 +222,7 @@ Sau khi cài đặt cert-manager và webhook
             solverName: bizflycloud
     ```
 
-    **Lưu ý** groupName phải match với groupName khi cài đặt webhook ở trên. Email là email để Let's encrypt thông báo cert sắp hết hạn
-
-4. Tạo nginx ingress
+4. Create nginx ingress
 
     ```yaml
     apiVersion: networking.k8s.io/v1beta1
@@ -258,9 +252,9 @@ Sau khi cài đặt cert-manager và webhook
             servicePort: 80
     ```
 
-5. Đợt 1 lúc để Let’s Encrypt cấp certificate
+5. Wait a couple of minutes for the Let’s Encrypt production server to issue the certificate
 
-6. Kiểm tra
+6. Verify
 
 ```bash
 quanlm@quanlm-desktop:~$ curl https://echo2.quanlm1999-testz.tk/
