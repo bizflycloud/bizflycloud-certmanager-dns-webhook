@@ -7,14 +7,11 @@
 # This group name should be **unique**, hence using your own company's domain
 # here is recommended.
 groupName: acme.mycompany.com
-authMethod: 
-bizflyEmail:
-bizflypassword:
-bizflyRegion: 
-apiURL:
-tenantID: 
-appCredentialID: 
-appCredentialSecret: 
+authMethod: application_credential
+bizflyEmail: example@example.com
+#bizflyPassword:
+appCredentialID: ###################3
+appCredentialSecret: #################3
 
 certManager:
   namespace: cert-manager

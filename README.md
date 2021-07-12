@@ -14,13 +14,14 @@ Install cert manager using this document here: <https://cert-manager.io/docs/ins
 
 #### Option 1
 
- Install bizflycloud-certmanager-dns-webhook using helm
+Install bizflycloud-certmanager-dns-webhook using helm
 
 **Note**: Choose a unique group name to identify your company or organization (for example `acme.mycompany.example`).
 
+Change your authentication value in `./deploy/bizflycloud-certmanager-dns-webhook/values.yaml`
+
 ```bash
-helm install ./deploy/bizflycloud-certmanager-dns-webhook \
- --set groupName='<YOUR_UNIQUE_GROUP_NAME>'
+helm install <deploy name> ./deploy/bizflycloud-certmanager-dns-webhook 
 ```
 
 #### Option 2
@@ -31,301 +32,74 @@ Install bizflycloud-certmanager-dns-webhook using manifest.
 
 This is important, as otherwise it'd be possible for anyone with access to your webhook to complete ACME challenge validations and obtain certificates.
 
-1. Create ServiceAccount for bizflycloud-certmanager-dns-webhook
+Install using the file `./manifest/bundle.yaml`
 
-    ```yaml
-    apiVersion: v1
-    kind: ServiceAccount
+Change your groupname match ClusterIssuer in these deployment:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: bizflycloud-webhook:domain-solver
+  labels:
+    app: bizflycloud-webhook
+rules:
+  - apiGroups:
+      - acme.mycompany.com
+    resources:
+      - '*'
+    verbs:
+      - 'create'
+```
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bizflycloud-webhook
+  namespace: cert-manager
+  labels:
+    app: bizflycloud-webhook
+spec:
+  selector:
+    matchLabels:
+      app: bizflycloud-webhook
+  template:
     metadata:
-    name: bizflycloud-certmanager-dns-webhook
-    namespace: cert-manager
-    labels:
-        app: bizflycloud-certmanager-dns-webhook
-    ```
-
-2. Create Role for bizflycloud-certmanager-dns-webhook
-
-    ```yaml
-    apiVersion: rbac.authorization.k8s.io/v1
-    kind: Role
-    metadata:
-    name: bizflycloud-certmanager-dns-webhook
-    namespace: cert-manager
-    labels:
-        app: bizflycloud-certmanager-dns-webhook
-    rules:
-    - apiGroups:
-        - ''
-        resources:
-        - 'secrets'
-        verbs:
-        - 'get'
-    ```
-
-3. Create RoleBinding
-
-    ```yaml
-    apiVersion: rbac.authorization.k8s.io/v1
-    kind: RoleBinding
-    metadata:
-    name: bizflycloud-certmanager-dns-webhook
-    namespace: cert-manager
-    labels:
-        app: bizflycloud-certmanager-dns-webhook
-    roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: Role
-    name: bizflycloud-certmanager-dns-webhook
-    subjects:
-    - apiGroup: ""
-        kind: ServiceAccount
-        name: bizflycloud-certmanager-dns-webhook
-        namespace: cert-manager
-    ```
-
-4. Grant the webhook permission to read the ConfigMap containing the Kubernetes
-
-    **Note**: This ConfigMap is automatically created by the Kubernetes apiserver.
-
-    ```yaml
-    apiVersion: rbac.authorization.k8s.io/v1
-    kind: RoleBinding
-    metadata:
-    name: bizflycloud-certmanager-dns-webhook:webhook-authentication-reader
-    namespace: kube-system
-    labels:
-        app: bizflycloud-certmanager-dns-webhook
-    roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: Role
-    name: extension-apiserver-authentication-reader
-    subjects:
-    - apiGroup: ""
-        kind: ServiceAccount
-        name: bizflycloud-certmanager-dns-webhook
-        namespace: cert-manager
-    ```
-
-5. Create ClusterRoleBinding
-
-    ```yaml
-    # Grant cert-manager permission to validate using our apiserver
-    apiVersion: rbac.authorization.k8s.io/v1
-    kind: ClusterRole
-    metadata:
-    name: bizflycloud-certmanager-dns-webhook:domain-solver
-    labels:
-        app: bizflycloud-certmanager-dns-webhook
-    rules:
-    - apiGroups:
-        - acme.mycompany.example
-        resources:
-        - '*'
-        verbs:
-        - 'create'
-    ```
-
-    ```yaml
-    apiVersion: rbac.authorization.k8s.io/v1
-    kind: ClusterRoleBinding
-    metadata:
-    name: bizflycloud-certmanager-dns-webhook:domain-solver
-    labels:
-        app: bizflycloud-certmanager-dns-webhook
-    roleRef:
-    apiGroup: rbac.authorization.k8s.io
-    kind: ClusterRole
-    name: bizflycloud-certmanager-dns-webhook:domain-solver
-    subjects:
-    - apiGroup: ""
-        kind: ServiceAccount
-        name: cert-manager
-        namespace: cert-manager
-    ```
-
-6. Create service
-
-    ```yaml
-    # Source: deploy/bizflycloud-certmanager-dns-webhook/templates/service.yaml
-    apiVersion: v1
-    kind: Service
-    metadata:
-    name: bizflycloud-certmanager-dns-webhook
-    namespace: cert-manager
-    labels:
-        app: bizflycloud-certmanager-dns-webhook
+      labels:
+        app: bizflycloud-webhook
     spec:
-    type: ClusterIP
-    ports:
-        - port: 443
-        targetPort: https
-        protocol: TCP
-        name: https
-    selector:
-        app: bizflycloud-certmanager-dns-webhook
-    ```
+      serviceAccountName: bizflycloud-webhook
+      containers:
+        - name: bizflycloud-webhook
+          image: cr-hn-1.vccloud.vn/31ff9581861a4d0ea4df5e7dda0f665d/bizflycloud-certmanager-dns-webhook:latest
+          imagePullPolicy: Always
+          args:
+            - --tls-cert-file=/tls/tls.crt
+            - --tls-private-key-file=/tls/tls.key
+          env:
+            - name: GROUP_NAME
+              value: "acme.mycompany.com"
+```
 
-7. Create deployment
-
-    ```yaml
-    # Source: deploy/bizflycloud-certmanager-dns-webhook/templates/deployment.yaml
-    apiVersion: apps/v1
-    kind: Deployment
-    metadata:
-    name: bizflycloud-certmanager-dns-webhook
+```yaml
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1alpha1.acme.mycompany.com
+  labels:
+    app: bizflycloud-webhook
+  annotations:
+    cert-manager.io/inject-ca-from: "cert-manager/bizflycloud-webhook-webhook-tls"
+spec:
+  group: acme.mycompany.com
+  groupPriorityMinimum: 1000
+  versionPriority: 15
+  service:
+    name: bizflycloud-webhook
     namespace: cert-manager
-    labels:
-        app: bizflycloud-certmanager-dns-webhook
-    spec:
-    selector:
-        matchLabels:
-        app: bizflycloud-certmanager-dns-webhook
-    template:
-        metadata:
-        labels:
-            app: bizflycloud-certmanager-dns-webhook
-        spec:
-        serviceAccountNams:
-        app: bizflycloud-certmanager-dns-webhook
-        containers:
-            - name: bizflycloud-certmanager-dns-webhook
-            image: cr-hn-1.bizflycloud.vn/1e7f10a9850b45b488a3f0417ccb60e0/bizflycloud-certmanager-webhook:0.1.4
-            imagePullPolicy: Always
-            args:
-                - --tls-cert-file=/tls/tls.crt
-                - --tls-private-key-file=/tls/tls.key
-            env:
-                - name: GROUP_NAME
-                value: "acme.mycompany.example"
-                - name: BIZFLYCLOUD_AUTH_METHOD
-                value: "application_credential"  #password
-                - name: BIZFLYCLOUD_EMAIL
-                value: example@example.com
-                - name: BIZFLYCLOUD_REGION
-                value: HN
-                - name: BIZFLYCLOUD_API_URL
-                value: https://manage.bizflycloud.vn
-                - name: BIZFLYCLOUD_TENANT_ID
-                value: *******
-                - name: BIZFLYCLOUD_APP_CREDENTIAL_ID
-                value: *******
-                - name: BIZFLYCLOUD_APP_CREDENTIAL_SECRET
-                value: *******
-            ports:
-                - name: https
-                containerPort: 443
-                protocol: TCP
-            livenessProbe:
-                httpGet:
-                scheme: HTTPS
-                path: /healthz
-                port: https
-            readinessProbe:
-                httpGet:
-                scheme: HTTPS
-                path: /healthz
-                port: https
-            volumeMounts:
-                - name: certs
-                mountPath: /tls
-                readOnly: true
-        volumes:
-            - name: certs
-            secret:
-                secretName: bizflycloud-webhook-webhook-tls
-    ```
-
-8. Create API service
-
-    ```yaml
-    apiVersion: apiregistration.k8s.io/v1
-    kind: APIService
-    metadata:
-    name: v1alpha1.acme.mycompany.example
-    labels:
-        app: bizflycloud-certmanager-dns-webhook
-    annotations:
-        cert-manager.io/inject-ca-from: "cert-manager/bizflycloud-webhook-webhook-tls"
-    spec:
-    group: acme.mycompany.example
-    groupPriorityMinimum: 1000
-    versionPriority: 15
-    service:
-        name: bizflycloud-certmanager-dns-webhook
-        namespace: cert-manager
-    version: v1alpha1
-    ```
-
-9. Create a selfsigned Issuer
-
-    ```yaml
-    # In order to create a root CA certificate for signing webhook serving certificates
-    apiVersion: cert-manager.io/v1alpha2
-    kind: Issuer
-    metadata:
-    name: bizflycloud-certmanager-dns-webhook-selfsign
-    namespace: cert-manager
-    labels:
-        app: bizflycloud-certmanager-dns-webhook
-    spec:
-    selfSigned: {}
-    ```
-
-10. Generate a CA Certificate used to sign certificates for the webhook
-
-    ```yaml
-    apiVersion: cert-manager.io/v1alpha2
-    kind: Certificate
-    metadata:
-    name: bizflycloud-certmanager-dns-webhook-ca
-    namespace: cert-manager
-    labels:
-        app: bizflycloud-certmanager-dns-webhook
-    spec:
-    secretName: bizflycloud-certmanager-dns-webhook-ca
-    duration: 43800h # 5y
-    issuerRef:
-        name: bizflycloud-certmanager-dns-webhook-selfsign
-    commonName: "ca.bizflycloud-certmanager-dns-webhook.cert-manager"
-    isCA: true
-    ```
-
-11. Create an Issuer that uses the above generated CA certificate to issue certs
-
-    ```yaml
-    apiVersion: cert-manager.io/v1alpha2
-    kind: Issuer
-    metadata:
-    name: bizflycloud-certmanager-dns-webhook-ca
-    namespace: cert-manager
-    labels:
-        app: bizflycloud-certmanager-dns-webhook
-    spec:
-    ca:
-        secretName: bizflycloud-certmanager-dns-webhook-ca
-    ```
-
-12. Generate a serving certificate for the webhook to use
-
-    ```yaml
-    apiVersion: cert-manager.io/v1alpha2
-    kind: Certificate
-    metadata:
-    name: bizflycloud-webhook-webhook-tls
-    namespace: cert-manager
-    labels:
-        app: bizflycloud-certmanager-dns-webhook
-    spec:
-    secretName: bizflycloud-webhook-webhook-tls
-    duration: 8760h # 1y
-    issuerRef:
-        name: bizflycloud-certmanager-dns-webhook-ca
-    dnsNames:
-    - bizflycloud-certmanager-dns-webhook
-    - bizflycloud-certmanager-dns-webhook.cert-manager
-    - bizflycloud-certmanager-dns-webhook.cert-manager.svc
-    - bizflycloud-certmanager-dns-webhook.cert-manager.svc.cluster.local
-    ```
+  version: v1alpha1
+```
 
 ## Example
 
@@ -434,7 +208,7 @@ After install cert-manager and bizflycloud-certmanager-dns-webhook
         solvers:
         - dns01:
             webhook:
-            groupName: acme.mycompany.example
+            groupName: acme.mycompany.com
             solverName: bizflycloud
     ```
 

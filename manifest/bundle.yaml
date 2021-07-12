@@ -1,0 +1,276 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bizflycloud-webhook
+  namespace: cert-manager
+  labels:
+    app: bizflycloud-webhook
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: bizflycloud-webhook
+  namespace: cert-manager
+  labels:
+    app: bizflycloud-webhook
+rules:
+  - apiGroups:
+      - ''
+    resources:
+      - 'secrets'
+    verbs:
+      - 'get'
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bizflycloud-webhook
+  namespace: cert-manager
+  labels:
+    app: bizflycloud-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: bizflycloud-webhook
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: bizflycloud-webhook
+    namespace: cert-manager
+
+---
+# Grant the webhook permission to read the ConfigMap containing the Kubernetes
+# apiserver's requestheader-ca-certificate.
+# This ConfigMap is automatically created by the Kubernetes apiserver.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: bizflycloud-webhook:webhook-authentication-reader
+  namespace: kube-system
+  labels:
+    app: bizflycloud-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: bizflycloud-webhook
+    namespace: cert-manager
+---
+# apiserver gets the auth-delegator role to delegate auth decisions to
+# the core apiserver
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: bizflycloud-webhook:auth-delegator
+  namespace: cert-manager
+  labels:
+    app: bizflycloud-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: bizflycloud-webhook
+    namespace: cert-manager
+---
+# Grant cert-manager permission to validate using our apiserver
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: bizflycloud-webhook:domain-solver
+  labels:
+    app: bizflycloud-webhook
+rules:
+  - apiGroups:
+      - acme.mycompany.com
+    resources:
+      - '*'
+    verbs:
+      - 'create'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: bizflycloud-webhook:domain-solver
+  labels:
+    app: bizflycloud-webhook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: bizflycloud-webhook:domain-solver
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: cert-manager
+    namespace: cert-manager
+
+---
+# Source: bizflycloud-webhook/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: bizflycloud-webhook
+  namespace: cert-manager
+  labels:
+    app: bizflycloud-webhook
+spec:
+  type: ClusterIP
+  ports:
+    - port: 443
+      targetPort: https
+      protocol: TCP
+      name: https
+  selector:
+    app: bizflycloud-webhook
+
+---
+# Source: bizflycloud-webhook/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bizflycloud-webhook
+  namespace: cert-manager
+  labels:
+    app: bizflycloud-webhook
+spec:
+  selector:
+    matchLabels:
+      app: bizflycloud-webhook
+  template:
+    metadata:
+      labels:
+        app: bizflycloud-webhook
+    spec:
+      serviceAccountName: bizflycloud-webhook
+      containers:
+        - name: bizflycloud-webhook
+          image: cr-hn-1.vccloud.vn/31ff9581861a4d0ea4df5e7dda0f665d/bizflycloud-certmanager-dns-webhook:latest
+          imagePullPolicy: Always
+          args:
+            - --tls-cert-file=/tls/tls.crt
+            - --tls-private-key-file=/tls/tls.key
+          env:
+            - name: GROUP_NAME
+              value: "acme.mycompany.com"
+            - name: BIZFLYCLOUD_AUTH_METHOD
+              value: "application_credential"
+            - name: BIZFLYCLOUD_EMAIL
+              value: example@example.com
+            - name: BIZFLYCLOUD_APP_CREDENTIAL_ID
+              value: xxxx
+            - name: BIZFLYCLOUD_APP_CREDENTIAL_SECRET
+              value: xxxx
+          ports:
+            - name: https
+              containerPort: 443
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /healthz
+              port: https
+          readinessProbe:
+            httpGet:
+              scheme: HTTPS
+              path: /healthz
+              port: https
+          volumeMounts:
+            - name: certs
+              mountPath: /tls
+              readOnly: true
+      volumes:
+        - name: certs
+          secret:
+            secretName: bizflycloud-webhook-webhook-tls
+
+---
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1alpha1.acme.mycompany.com
+  labels:
+    app: bizflycloud-webhook
+  annotations:
+    cert-manager.io/inject-ca-from: "cert-manager/bizflycloud-webhook-webhook-tls"
+spec:
+  group: acme.mycompany.com
+  groupPriorityMinimum: 1000
+  versionPriority: 15
+  service:
+    name: bizflycloud-webhook
+    namespace: cert-manager
+  version: v1alpha1
+
+---
+# Create a selfsigned Issuer, in order to create a root CA certificate for
+# signing webhook serving certificates
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata:
+  name: bizflycloud-webhook-selfsign
+  namespace: cert-manager
+  labels:
+    app: bizflycloud-webhook
+spec:
+  selfSigned: {}
+
+---
+
+# Generate a CA Certificate used to sign certificates for the webhook
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: bizflycloud-webhook-ca
+  namespace: cert-manager
+  labels:
+    app: bizflycloud-webhook
+spec:
+  secretName: bizflycloud-webhook-ca
+  duration: 43800h # 5y
+  issuerRef:
+    name: bizflycloud-webhook-selfsign
+  commonName: "ca.bizflycloud-webhook.cert-manager"
+  isCA: true
+
+---
+
+# Create an Issuer that uses the above generated CA certificate to issue certs
+apiVersion: cert-manager.io/v1alpha2
+kind: Issuer
+metadata:
+  name: bizflycloud-webhook-ca
+  namespace: cert-manager
+  labels:
+    app: bizflycloud-webhook
+spec:
+  ca:
+    secretName: bizflycloud-webhook-ca
+
+---
+
+# Finally, generate a serving certificate for the webhook to use
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: bizflycloud-webhook-webhook-tls
+  namespace: cert-manager
+  labels:
+    app: bizflycloud-webhook
+spec:
+  secretName: bizflycloud-webhook-webhook-tls
+  duration: 8760h # 1y
+  issuerRef:
+    name: bizflycloud-webhook-ca
+  dnsNames:
+  - bizflycloud-webhook
+  - bizflycloud-webhook.cert-manager
+  - bizflycloud-webhook.cert-manager.svc
+  - bizflycloud-webhook.cert-manager.svc.cluster.local

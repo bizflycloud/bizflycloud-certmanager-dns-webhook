@@ -43,26 +43,13 @@ spec:
                 secretKeyRef:
                   name: {{ include "bizflycloud-certmanager-dns-webhook.fullname" . }}
                   key: bizflyEmail
+            {{- if eq .Values.authMethod "password"}}
             - name: BIZFLYCLOUD_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "bizflycloud-certmanager-dns-webhook.fullname" . }}
                   key: bizflyPassword
-            - name: BIZFLYCLOUD_REGION
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "bizflycloud-certmanager-dns-webhook.fullname" . }}
-                  key: bizflyRegion
-            - name: BIZFLYCLOUD_API_URL
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "bizflycloud-certmanager-dns-webhook.fullname" . }}
-                  key: apiURL
-            - name: BIZFLYCLOUD_TENANT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "bizflycloud-certmanager-dns-webhook.fullname" . }}
-                  key: tenantID
+            {{- else if eq .Values.authMethod "application_credential"}}
             - name: BIZFLYCLOUD_APP_CREDENTIAL_ID
               valueFrom:
                 secretKeyRef:
@@ -73,6 +60,7 @@ spec:
                 secretKeyRef:
                   name: {{ include "bizflycloud-certmanager-dns-webhook.fullname" . }}
                   key: appCredentialSecret
+            {{- end }}
           ports:
             - name: https
               containerPort: 443
