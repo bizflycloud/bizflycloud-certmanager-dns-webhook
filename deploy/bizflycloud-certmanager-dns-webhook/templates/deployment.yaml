@@ -29,23 +29,50 @@ spec:
             - --tls-private-key-file=/tls/tls.key
           env:
             - name: GROUP_NAME
-              value: {{ .Values.groupName | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bizflycloud-certmanager-dns-webhook.fullname" . }}
+                  key: groupName
             - name: BIZFLYCLOUD_AUTH_METHOD
-              value: {{ .Values.auth | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bizflycloud-certmanager-dns-webhook.fullname" . }}
+                  key: authMethod
             - name: BIZFLYCLOUD_EMAIL
-              value: {{ .Values.bizflyEmail }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bizflycloud-certmanager-dns-webhook.fullname" . }}
+                  key: bizflyEmail
             - name: BIZFLYCLOUD_PASSWORD
-              value: {{ .Values.password }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bizflycloud-certmanager-dns-webhook.fullname" . }}
+                  key: bizflyPassword
             - name: BIZFLYCLOUD_REGION
-              value: {{ .Values.bizflyRegion }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bizflycloud-certmanager-dns-webhook.fullname" . }}
+                  key: bizflyRegion
             - name: BIZFLYCLOUD_API_URL
-              value: {{ .Values.apiURL }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bizflycloud-certmanager-dns-webhook.fullname" . }}
+                  key: apiURL
             - name: BIZFLYCLOUD_TENANT_ID
-              value: {{ .Values.tenantID }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bizflycloud-certmanager-dns-webhook.fullname" . }}
+                  key: tenantID
             - name: BIZFLYCLOUD_APP_CREDENTIAL_ID
-              value: {{ .Values.appCredentialID }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bizflycloud-certmanager-dns-webhook.fullname" . }}
+                  key: appCredentialID
             - name: BIZFLYCLOUD_APP_CREDENTIAL_SECRET
-              value: {{ .Values.appCredentialSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "bizflycloud-certmanager-dns-webhook.fullname" . }}
+                  key: appCredentialSecret
           ports:
             - name: https
               containerPort: 443

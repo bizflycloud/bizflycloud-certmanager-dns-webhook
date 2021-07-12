@@ -7,9 +7,9 @@
 # This group name should be **unique**, hence using your own company's domain
 # here is recommended.
 groupName: acme.mycompany.com
-auth: 
+authMethod: 
 bizflyEmail:
-password:
+bizflypassword:
 bizflyRegion: 
 apiURL:
 tenantID: 
