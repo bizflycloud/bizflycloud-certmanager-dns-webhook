@@ -1,7 +1,5 @@
 # BizflyCloud Cert-manager DNS webhook
 
-Cert-manager ACME DNS webhook provider for BizflyCloud DNS.
-
 ## Giới thiệu
 
 BizflyCloud Cert-manager DNS là một webhook thực hiện công việc xử lý DNS01 challenge với cert-manager
@@ -18,7 +16,7 @@ Thay vì phải thủ công lấy key, tạo bản ghi như vậy cho từng sub
 
 ### Cài đặt cert manager
 
-Install cert manager using this document here: <https://cert-manager.io/docs/installation/kubernetes/>
+Cài đặt cert-manager theo tài liệu chính thức: <https://cert-manager.io/docs/installation/kubernetes/>
 
 ### Cài đặt webhook
 
@@ -42,9 +40,8 @@ helm install <deploy name> ./deploy/bizflycloud-certmanager-dns-webhook
 
 Cài đặt bizflycloud-certmanager-dns-webhook với manifest.
 
-**Notes**: Webhook's themselves are deployed as Kubernetes API services, in order to allow administrators to restrict access to webhooks with Kubernetes RBAC.
+**Notes**: Webhook được triển khai thành API Service nhằm giúp quản trị viên hạn chế được các truy cập thông qua Kubernetes RBAC.
 
-This is important, as otherwise it'd be possible for anyone with access to your webhook to complete ACME challenge validations and obtain certificates.
 
 Cài đặt trong file `./manifest/bundle.yaml`
 
@@ -198,8 +195,6 @@ Sau khi cài đặt cert-manager và webhook
 
     Hướng dẫn: <https://engineering.bizflycloud.vn/cai-dat-nginx-ingress-controller-cho-kubernetes/>
 
-    After that, use BizflyCloud DNS service to create record for your domain and sub-domain.
-
     Sau đó, sử dụng dịch vụ DNS của BizflyCloud trỏ bản ghi và subdomain của bạn, địa chỉ IPv4 lấy từ loadbalancer được tạo ra với nginx-ingress
 
     ![dns](https://raw.githubusercontent.com/lmq1999/123/master/image.png)
@@ -267,7 +262,7 @@ quanlm@quanlm-desktop:~$ curl https://echo2.quanlm1999-testz.tk/
 echo2
 ```
 
-Using `curl -v` to see TLS handshake
+Sử dụng câu lệnh `curl -v` để thấy bắt tay TLS/SSL
 
 ```bash
 quanlm@quanlm-desktop:~$ curl https://echo2.quanlm1999-testz.tk/ -v
